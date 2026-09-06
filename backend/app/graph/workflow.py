@@ -87,6 +87,11 @@ Marketing proposal: {marketing.get('campaign_name')} targeting {marketing.get('t
     result = decision.model_dump()
     result["decision_id"] = decision_id
 
+    if decision.requires_approval:
+        from app.hitl import create_pending_approval
+        approval_id = await create_pending_approval(decision_id)
+        result["approval_id"] = approval_id
+
     return {
         "ceo_decision": result,
         "requires_approval": decision.requires_approval,

@@ -11,4 +11,5 @@ def run_product_analysis(context: str) -> ProductChange:
     llm = get_llm("product")
     structured_llm = llm.with_structured_output(ProductChange)
     prompt = f"{PRODUCT_SYSTEM_PROMPT}\n\nSituation:\n{context}\n\nPropose one product change."
-    return structured_llm.invoke(prompt)
+    from app.llm.retry import invoke_with_retry
+    return invoke_with_retry(structured_llm, prompt)

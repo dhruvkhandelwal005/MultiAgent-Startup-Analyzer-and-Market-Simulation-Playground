@@ -18,5 +18,6 @@ def run_ceo_decision(context: str) -> AgentDecision:
 
     prompt = f"{CEO_SYSTEM_PROMPT}\n\nSituation:\n{context}\n\nMake your decision. Keep 'reason' and 'expected_impact' under 40 words each."
 
-    decision = structured_llm.invoke(prompt)
+    from app.llm.retry import invoke_with_retry
+    decision = invoke_with_retry(structured_llm, prompt)
     return decision
