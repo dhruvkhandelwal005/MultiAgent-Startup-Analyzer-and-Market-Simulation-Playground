@@ -1,0 +1,1 @@
+ALTER TABLE agent_decisions ALTER COLUMN action TYPE VARCHAR(500);
