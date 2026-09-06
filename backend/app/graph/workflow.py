@@ -69,6 +69,12 @@ Marketing proposal: {marketing.get('campaign_name')} targeting {marketing.get('t
 """
     decision = run_ceo_decision(summary)
 
+    from app.guardrails import check_budget_constraint
+    budget_check = await check_budget_constraint(state["simulation_id"], decision.estimated_cost)
+    if not budget_check["passed"]:
+        decision.action = f"[REJECTED - {budget_check['reason']}] {decision.action}"
+        decision.requires_approval = True
+
     decision_id = await save_decision(
         simulation_id=state["simulation_id"],
         agent_role="ceo",
