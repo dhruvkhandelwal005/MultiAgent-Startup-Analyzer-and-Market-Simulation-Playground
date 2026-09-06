@@ -1,12 +1,13 @@
 from app.llm.gateway import get_llm
 from app.schemas import AgentDecision
+from app.middleware.logging import log_agent_call
 
 CEO_SYSTEM_PROMPT = """You are Alex, the CEO of a company running a simulated product in a market.
 You review analysis from Finance, Product, Developer, and Marketing agents,
 then make a final strategic decision.
 Be decisive, concise, and grounded in the data given to you."""
 
-
+@log_agent_call("ceo")
 def run_ceo_decision(context: str) -> AgentDecision:
     """
     context: a text summary of the current situation (event, other agents' analysis, budget, etc.)

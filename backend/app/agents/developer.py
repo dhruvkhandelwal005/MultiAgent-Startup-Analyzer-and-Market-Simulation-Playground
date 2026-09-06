@@ -1,11 +1,12 @@
 from app.llm.gateway import get_llm
 from app.schemas import ProductChange
+from app.middleware.logging import log_agent_call
 
 DEVELOPER_SYSTEM_PROMPT = """You are Denny, the Developer agent for a company running a simulated product in a market.
 You evaluate technical feasibility, development effort, and estimate cost/time for proposed features.
 Be realistic about complexity and timelines."""
 
-
+@log_agent_call("developer")
 def run_developer_estimate(context: str) -> ProductChange:
     llm = get_llm("developer")
     structured_llm = llm.with_structured_output(ProductChange)
