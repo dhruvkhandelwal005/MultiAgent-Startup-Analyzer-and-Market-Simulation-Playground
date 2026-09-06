@@ -15,7 +15,7 @@ def run_ceo_decision(context: str) -> AgentDecision:
     llm = get_llm("ceo")
     structured_llm = llm.with_structured_output(AgentDecision)
 
-    prompt = f"{CEO_SYSTEM_PROMPT}\n\nSituation:\n{context}\n\nMake your decision."
+    prompt = f"{CEO_SYSTEM_PROMPT}\n\nSituation:\n{context}\n\nMake your decision. Keep 'reason' and 'expected_impact' under 40 words each."
 
     decision = structured_llm.invoke(prompt)
     return decision
