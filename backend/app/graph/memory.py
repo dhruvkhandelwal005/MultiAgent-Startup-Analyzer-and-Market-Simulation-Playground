@@ -40,3 +40,22 @@ async def get_recent_history_text(simulation_id: int, limit: int = 3) -> str:
 
     lines = [f"- {r['action']} (status: {r['status']}, reason: {r['reason'][:100]})" for r in rows]
     return "Previous decisions:\n" + "\n".join(lines)
+
+
+async def save_evaluation(
+    decision_id: int,
+    strategic_score: float,
+    financial_score: float,
+    risk_score: float,
+    overall_score: float,
+    feedback: str,
+) -> int:
+    conn = await get_connection()
+    row = await conn.fetchrow(
+        """INSERT INTO evaluations
+           (decision_id, strategic_score, financial_score, risk_score, overall_score, feedback)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING id""",
+        decision_id, strategic_score, financial_score, risk_score, overall_score, feedback
+    )
+    await conn.close()
+    return row["id"]

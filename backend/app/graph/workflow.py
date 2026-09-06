@@ -8,13 +8,14 @@ from langgraph.graph import StateGraph, END
 
 from app.graph.state import SimulationState
 from app.graph.tools_bridge import fetch_simulation_context, format_context_as_text
-from app.graph.memory import save_decision, get_recent_history_text
 from app.agents.finance import run_finance_analysis
 from app.agents.product import run_product_analysis
 from app.agents.developer import run_developer_estimate
 from app.agents.marketing import run_marketing_decision
 from app.agents.ceo import run_ceo_decision
 from app.events import publish
+from app.agents.judge import run_judge_evaluation
+from app.graph.memory import save_decision, get_recent_history_text, save_evaluation
 
 
 async def _emit(state: SimulationState, message: str):
@@ -113,6 +114,25 @@ Marketing proposal: {marketing.get('campaign_name')} targeting {marketing.get('t
         await _emit(state, "Decision pending human approval.")
     else:
         await _emit(state, f"CEO decision: {decision.action}")
+
+    eval_context = f"""
+Event: {state['current_event']}
+Decision: {decision.action}
+Reason: {decision.reason}
+Estimated cost: {decision.estimated_cost}
+Expected impact: {decision.expected_impact}
+"""
+    evaluation = run_judge_evaluation(eval_context)
+    await save_evaluation(
+        decision_id=decision_id,
+        strategic_score=evaluation.strategic_score,
+        financial_score=evaluation.financial_score,
+        risk_score=evaluation.risk_score,
+        overall_score=evaluation.overall_score,
+        feedback=evaluation.feedback,
+    )
+    result["evaluation"] = evaluation.model_dump()
+    await _emit(state, f"Judge score: {evaluation.overall_score}/100")
 
     return {
         "ceo_decision": result,

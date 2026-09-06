@@ -26,3 +26,10 @@ class MarketingDecision(BaseModel):
     budget: float
     expected_reach: int
     expected_conversion: float = Field(ge=0, le=100)
+
+class DecisionEvaluation(BaseModel):
+    strategic_score: float  # 0-100
+    financial_score: float  # 0-100
+    risk_score: float  # 0-100
+    overall_score: float  # 0-100
+    feedback: str
