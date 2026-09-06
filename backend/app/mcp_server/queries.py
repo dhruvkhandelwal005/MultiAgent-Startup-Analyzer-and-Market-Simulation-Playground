@@ -17,13 +17,22 @@ async def get_simulation_state(simulation_id: int) -> dict:
 
 
 async def get_product_info(simulation_id: int) -> dict:
+    import json
+
     conn = await get_connection()
     row = await conn.fetchrow(
         "SELECT id, name, description, features, pricing, quality_score, target_segments FROM products WHERE simulation_id = $1",
         simulation_id,
     )
     await conn.close()
-    return dict(row) if row else {}
+    if not row:
+        return {}
+    result = dict(row)
+    if isinstance(result.get("features"), str):
+        result["features"] = json.loads(result["features"])
+    if isinstance(result.get("target_segments"), str):
+        result["target_segments"] = json.loads(result["target_segments"])
+    return result
 
 
 async def get_population_segments(simulation_id: int) -> list[dict]:

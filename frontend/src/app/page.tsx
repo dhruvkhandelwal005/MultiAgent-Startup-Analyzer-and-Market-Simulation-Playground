@@ -1,40 +1,28 @@
-import Link from "next/link";
+const METRICS = [
+  { label: "Active Users", value: "—" },
+  { label: "Revenue", value: "—" },
+  { label: "Cash Remaining", value: "—" },
+  { label: "Market Share", value: "—" },
+];
 
 export default function Dashboard() {
   return (
-    <main className="p-8">
-      <h1 className="text-3xl font-bold mb-6">Market Sim Platform</h1>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="border rounded-lg p-4">
-          <p className="text-sm text-gray-500">Active Users</p>
-          <p className="text-2xl font-semibold">--</p>
-        </div>
-        <div className="border rounded-lg p-4">
-          <p className="text-sm text-gray-500">Revenue</p>
-          <p className="text-2xl font-semibold">--</p>
-        </div>
-        <div className="border rounded-lg p-4">
-          <p className="text-sm text-gray-500">Cash Remaining</p>
-          <p className="text-2xl font-semibold">--</p>
-        </div>
-        <div className="border rounded-lg p-4">
-          <p className="text-sm text-gray-500">Market Share</p>
-          <p className="text-2xl font-semibold">--</p>
-        </div>
+    <main className="max-w-6xl mx-auto px-6 py-10">
+      <div className="mb-8">
+        <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+        <p className="text-sm text-muted mt-1">
+          Live overview of the simulation, product, and market.
+        </p>
       </div>
 
-      <nav className="flex gap-4">
-        <Link href="/team-builder" className="px-4 py-2 bg-black text-white rounded-lg">
-          Team Builder
-        </Link>
-        <Link href="/product" className="px-4 py-2 bg-black text-white rounded-lg">
-          Product View
-        </Link>
-        <Link href="/market" className="px-4 py-2 bg-black text-white rounded-lg">
-          Market Playground
-        </Link>
-      </nav>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border border border-border">
+        {METRICS.map((m) => (
+          <div key={m.label} className="bg-surface p-5">
+            <p className="text-xs text-muted uppercase tracking-wide">{m.label}</p>
+            <p className="font-mono text-2xl mt-2 text-foreground">{m.value}</p>
+          </div>
+        ))}
+      </div>
     </main>
   );
 }
