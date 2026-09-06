@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.routes.simulations import router as simulations_router
 
 app = FastAPI(title="Market Sim Platform")
+app.include_router(simulations_router)
 
 app.add_middleware(
     CORSMiddleware,
