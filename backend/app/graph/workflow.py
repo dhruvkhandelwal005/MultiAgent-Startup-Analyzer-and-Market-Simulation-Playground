@@ -1,6 +1,7 @@
 """
 LangGraph workflow: event -> relevant agents (conditional) -> CEO decision.
 Fully async. Includes persistent memory (fetch history, save decision).
+Publishes SSE events at each node for live agent activity streaming.
 """
 
 from langgraph.graph import StateGraph, END
@@ -13,42 +14,59 @@ from app.agents.product import run_product_analysis
 from app.agents.developer import run_developer_estimate
 from app.agents.marketing import run_marketing_decision
 from app.agents.ceo import run_ceo_decision
+from app.events import publish
+
+
+async def _emit(state: SimulationState, message: str):
+    request_id = state.get("request_id")
+    if request_id is not None:
+        await publish(request_id, {"message": message})
 
 
 async def load_history_node(state: SimulationState) -> dict:
+    await _emit(state, "Loading agent memory/history...")
     history = await get_recent_history_text(state["simulation_id"])
     return {"history_text": history}
 
 
 async def finance_node(state: SimulationState) -> dict:
+    await _emit(state, "Finance agent analyzing budget...")
     context = await fetch_simulation_context(state["simulation_id"])
     text = format_context_as_text(context, state["current_event"]) + f"\n\n{state.get('history_text', '')}"
     decision = run_finance_analysis(text)
+    await _emit(state, f"Finance decision: {decision.action}")
     return {"finance_analysis": decision.model_dump()}
 
 
 async def product_node(state: SimulationState) -> dict:
+    await _emit(state, "Product agent analyzing feature strategy...")
     context = await fetch_simulation_context(state["simulation_id"])
     text = format_context_as_text(context, state["current_event"]) + f"\n\n{state.get('history_text', '')}"
     result = run_product_analysis(text)
+    await _emit(state, f"Product proposal: {result.feature}")
     return {"product_analysis": result.model_dump()}
 
 
 async def developer_node(state: SimulationState) -> dict:
+    await _emit(state, "Developer agent estimating feasibility...")
     product = state.get("product_analysis", {})
     text = f"Proposed feature: {product.get('feature')} - {product.get('description')}\nEvent: {state['current_event']}"
     result = run_developer_estimate(text)
+    await _emit(state, f"Developer estimate: cost {result.development_cost}, {result.development_time_days} days")
     return {"developer_analysis": result.model_dump()}
 
 
 async def marketing_node(state: SimulationState) -> dict:
+    await _emit(state, "Marketing agent designing campaign...")
     context = await fetch_simulation_context(state["simulation_id"])
     text = format_context_as_text(context, state["current_event"]) + f"\n\n{state.get('history_text', '')}"
     result = run_marketing_decision(text)
+    await _emit(state, f"Marketing proposal: {result.campaign_name}")
     return {"marketing_analysis": result.model_dump()}
 
 
 async def ceo_node(state: SimulationState) -> dict:
+    await _emit(state, "CEO reviewing all recommendations...")
     finance = state.get("finance_analysis", {})
     product = state.get("product_analysis", {})
     developer = state.get("developer_analysis", {})
@@ -74,6 +92,7 @@ Marketing proposal: {marketing.get('campaign_name')} targeting {marketing.get('t
     if not budget_check["passed"]:
         decision.action = f"[REJECTED - {budget_check['reason']}] {decision.action}"
         decision.requires_approval = True
+        await _emit(state, f"Guardrail rejected: {budget_check['reason']}")
 
     decision_id = await save_decision(
         simulation_id=state["simulation_id"],
@@ -91,6 +110,9 @@ Marketing proposal: {marketing.get('campaign_name')} targeting {marketing.get('t
         from app.hitl import create_pending_approval
         approval_id = await create_pending_approval(decision_id)
         result["approval_id"] = approval_id
+        await _emit(state, "Decision pending human approval.")
+    else:
+        await _emit(state, f"CEO decision: {decision.action}")
 
     return {
         "ceo_decision": result,
@@ -129,10 +151,6 @@ def build_graph():
         route_after_history,
         {"finance": "finance", "product": "product"},
     )
-
-    # revenue_drop path: finance -> ceo (skip product/dev/marketing)
-    # adoption_drop path: product -> marketing -> ceo (skip finance/dev)
-    # general/competitor path: finance -> product -> developer -> marketing -> ceo
 
     def route_after_finance(state: SimulationState) -> str:
         if state.get("event_type") == "revenue_drop":

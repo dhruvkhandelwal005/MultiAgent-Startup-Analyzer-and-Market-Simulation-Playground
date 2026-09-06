@@ -12,3 +12,4 @@ class SimulationState(TypedDict, total=False):
     marketing_analysis: Optional[dict]
     ceo_decision: Optional[dict]
     requires_approval: bool
+    request_id: Optional[int]
