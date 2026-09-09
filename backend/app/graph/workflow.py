@@ -5,7 +5,7 @@ Publishes SSE events at each node for live agent activity streaming.
 """
 
 from langgraph.graph import StateGraph, END
-
+from app.simulation.engine import run_simulation_tick
 from app.graph.state import SimulationState
 from app.graph.tools_bridge import fetch_simulation_context, format_context_as_text
 from app.agents.finance import run_finance_analysis
@@ -133,6 +133,16 @@ Expected impact: {decision.expected_impact}
     )
     result["evaluation"] = evaluation.model_dump()
     await _emit(state, f"Judge score: {evaluation.overall_score}/100")
+
+    cost_applied = decision.estimated_cost if budget_check["passed"] else 0.0
+    new_metrics = await run_simulation_tick(state["simulation_id"], decision_cost=cost_applied)
+    if new_metrics:
+        result["metrics"] = new_metrics
+        await _emit(
+            state,
+            f"Metrics updated: {new_metrics['active_users']} active users, "
+            f"₹{new_metrics['cash_remaining']} cash remaining.",
+        )
 
     return {
         "ceo_decision": result,
