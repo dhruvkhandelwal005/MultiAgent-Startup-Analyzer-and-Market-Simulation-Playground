@@ -33,3 +33,11 @@ class DecisionEvaluation(BaseModel):
     risk_score: float  # 0-100
     overall_score: float  # 0-100
     feedback: str
+
+class ProductDefinition(BaseModel):
+    name: str
+    description: str
+    features: list[str]
+    pricing: float
+    target_segments: list[str]
+    quality_score: float = Field(ge=0, le=100)

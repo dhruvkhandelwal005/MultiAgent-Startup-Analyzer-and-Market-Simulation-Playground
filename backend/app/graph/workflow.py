@@ -18,6 +18,22 @@ from app.agents.judge import run_judge_evaluation
 from app.graph.memory import save_decision, get_recent_history_text, save_evaluation
 
 
+from app.db import get_connection
+
+
+async def get_team_roles(simulation_id: int) -> set[str]:
+    conn = await get_connection()
+    rows = await conn.fetch(
+        """SELECT a.role FROM teams t
+           JOIN agents a ON a.id = t.agent_id
+           WHERE t.simulation_id = $1""",
+        simulation_id,
+    )
+    await conn.close()
+    roles = {r["role"] for r in rows}
+    return roles if roles else {"ceo", "finance", "product", "developer", "marketing"}
+
+
 async def _emit(state: SimulationState, message: str):
     request_id = state.get("request_id")
     if request_id is not None:
@@ -27,10 +43,14 @@ async def _emit(state: SimulationState, message: str):
 async def load_history_node(state: SimulationState) -> dict:
     await _emit(state, "Loading agent memory/history...")
     history = await get_recent_history_text(state["simulation_id"])
-    return {"history_text": history}
+    team_roles = await get_team_roles(state["simulation_id"])
+    return {"history_text": history, "team_roles": list(team_roles)}
 
 
 async def finance_node(state: SimulationState) -> dict:
+    if "finance" not in state.get("team_roles", []):
+        await _emit(state, "Finance agent not on team, skipping.")
+        return {"finance_analysis": {}}
     await _emit(state, "Finance agent analyzing budget...")
     context = await fetch_simulation_context(state["simulation_id"])
     text = format_context_as_text(context, state["current_event"]) + f"\n\n{state.get('history_text', '')}"
@@ -40,6 +60,9 @@ async def finance_node(state: SimulationState) -> dict:
 
 
 async def product_node(state: SimulationState) -> dict:
+    if "product" not in state.get("team_roles", []):
+        await _emit(state, "Product agent not on team, skipping.")
+        return {"product_analysis": {}}
     await _emit(state, "Product agent analyzing feature strategy...")
     context = await fetch_simulation_context(state["simulation_id"])
     text = format_context_as_text(context, state["current_event"]) + f"\n\n{state.get('history_text', '')}"
@@ -49,6 +72,9 @@ async def product_node(state: SimulationState) -> dict:
 
 
 async def developer_node(state: SimulationState) -> dict:
+    if "developer" not in state.get("team_roles", []):
+        await _emit(state, "Developer agent not on team, skipping.")
+        return {"developer_analysis": {}}
     await _emit(state, "Developer agent estimating feasibility...")
     product = state.get("product_analysis", {})
     text = f"Proposed feature: {product.get('feature')} - {product.get('description')}\nEvent: {state['current_event']}"
@@ -58,6 +84,9 @@ async def developer_node(state: SimulationState) -> dict:
 
 
 async def marketing_node(state: SimulationState) -> dict:
+    if "marketing" not in state.get("team_roles", []):
+        await _emit(state, "Marketing agent not on team, skipping.")
+        return {"marketing_analysis": {}}
     await _emit(state, "Marketing agent designing campaign...")
     context = await fetch_simulation_context(state["simulation_id"])
     text = format_context_as_text(context, state["current_event"]) + f"\n\n{state.get('history_text', '')}"

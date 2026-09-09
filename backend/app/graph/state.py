@@ -13,3 +13,4 @@ class SimulationState(TypedDict, total=False):
     ceo_decision: Optional[dict]
     requires_approval: bool
     request_id: Optional[int]
+    team_roles: Optional[list]

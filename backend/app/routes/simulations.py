@@ -67,3 +67,23 @@ async def trigger_event_stream(simulation_id: int, request: EventRequest):
             await task
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+from app.agents.product_builder import run_product_build
+from app.graph.memory import save_product
+
+
+class BuildProductRequest(BaseModel):
+    idea: str
+    budget: float = 1000000.0
+
+
+@router.post("/simulations/{simulation_id}/build-product")
+async def build_product(simulation_id: int, request: BuildProductRequest):
+    from app.graph.workflow import get_team_roles
+
+    team_roles = await get_team_roles(simulation_id)
+    product = run_product_build(request.idea, request.budget, team_roles=list(team_roles))
+    product_id = await save_product(simulation_id, product)
+    result = product.model_dump()
+    result["id"] = product_id
+    return result

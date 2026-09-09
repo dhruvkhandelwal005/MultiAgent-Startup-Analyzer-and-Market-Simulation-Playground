@@ -17,7 +17,7 @@ export default function ProductView() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/simulations/1/product")
+    fetch("http://127.0.0.1:8000/simulations/1/product", { cache: "no-store" })
       .then((res) => {
         if (!res.ok) throw new Error("Product not found");
         return res.json();

@@ -1,7 +1,7 @@
 """
 Persistent memory: save decisions to Postgres, retrieve history for context.
 """
-
+import json
 from app.db import get_connection
 
 
@@ -57,5 +57,40 @@ async def save_evaluation(
            VALUES ($1, $2, $3, $4, $5, $6) RETURNING id""",
         decision_id, strategic_score, financial_score, risk_score, overall_score, feedback
     )
+    await conn.close()
+    return row["id"]
+
+
+async def save_product(simulation_id: int, product) -> int:
+    conn = await get_connection()
+    existing = await conn.fetchrow(
+        "SELECT id FROM products WHERE simulation_id = $1", simulation_id
+    )
+    if existing:
+        row = await conn.fetchrow(
+            """UPDATE products SET name=$1, description=$2, features=$3, pricing=$4,
+               target_segments=$5, quality_score=$6, updated_at=now()
+               WHERE simulation_id=$7 RETURNING id""",
+            product.name,
+            product.description,
+            json.dumps(product.features),
+            product.pricing,
+            json.dumps(product.target_segments),
+            product.quality_score,
+            simulation_id,
+        )
+    else:
+        row = await conn.fetchrow(
+            """INSERT INTO products
+               (simulation_id, name, description, features, pricing, target_segments, quality_score)
+               VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id""",
+            simulation_id,
+            product.name,
+            product.description,
+            json.dumps(product.features),
+            product.pricing,
+            json.dumps(product.target_segments),
+            product.quality_score,
+        )
     await conn.close()
     return row["id"]

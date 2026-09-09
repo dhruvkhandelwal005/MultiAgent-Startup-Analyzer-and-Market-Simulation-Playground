@@ -16,7 +16,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/simulations/1/metrics")
+    fetch("http://127.0.0.1:8000/simulations/1/metrics", { cache: "no-store" })
       .then((res) => {
         if (!res.ok) throw new Error("No metrics found");
         return res.json();
